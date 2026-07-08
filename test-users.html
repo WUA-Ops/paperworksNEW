@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试用户数据 - 毕业论文平台</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .stats {
+            background: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-around;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2196f3;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #2196f3;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f5f5f5;
+        }
+        .phone { color: #4caf50; }
+        .email { color: #ff9800; }
+        .copy-btn {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover { background: #1976d2; }
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .validation-info {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>毕业论文平台 - 测试用户数据</h1>
+    
+    <div class="info">
+        <strong>使用说明：</strong>
+        <ol>
+            <li>从下方表格中复制<strong>用户名</strong>和<strong>密码</strong></li>
+            <li>在登录表单中输入用户名和密码</li>
+            <li>点击"获取验证码"按钮</li>
+            <li>输入弹出的验证码（6位字母+数字）</li>
+            <li>点击登录按钮即可登录</li>
+        </ol>
+    </div>
+
+    <div class="validation-info">
+        <strong>格式验证规则：</strong>
+        <ul>
+            <li>手机号：11位数字，以1开头，第二位为3-9（如：13812345678）</li>
+            <li>邮箱：标准邮箱格式（如：user@example.com）</li>
+            <li>密码：8-12位，必须包含大写字母、小写字母、数字、特殊符号</li>
+        </ul>
+    </div>
+
+    <div class="stats">
+        <div class="stat-item">
+            <div class="stat-number" id="totalUsers">0</div>
+            <div class="stat-label">总用户数</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="phoneUsers">0</div>
+            <div class="stat-label">手机号用户</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="emailUsers">0</div>
+            <div class="stat-label">邮箱用户</div>
+        </div>
+    </div>
+
+    <input type="text" class="search-box" id="searchBox" placeholder="搜索用户名或密码...">
+    
+    <table id="usersTable">
+        <thead>
+            <tr>
+                <th>序号</th>
+                <th>用户名（手机号/邮箱）</th>
+                <th>密码</th>
+                <th>类型</th>
+                <th>长度验证</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="usersBody">
+        </tbody>
+    </table>
+
+    <script>
+        /**
+         * 生成正确的11位手机号
+         * 格式：1[3-9]XXXXXXXXX（共11位）
+         */
+        function generatePhone() {
+            const secondDigit = ['3', '4', '5', '6', '7', '8', '9'];
+            const prefix = '1' + secondDigit[Math.floor(Math.random() * secondDigit.length)];
+            // 生成9位随机数字，确保总长度为11位
+            const suffix = Math.floor(Math.random() * 1000000000).toString().padStart(9, '0');
+            return prefix + suffix;
+        }
+
+        /**
+         * 生成随机邮箱
+         */
+        function generateEmail() {
+            const domains = ['gmail.com', 'qq.com', '163.com', '126.com', 'outlook.com', 'sina.com', 'sohu.com', 'foxmail.com'];
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let localPart = '';
+            const length = Math.floor(Math.random() * 10) + 5;
+            for (let i = 0; i < length; i++) {
+                localPart += chars[Math.floor(Math.random() * chars.length)];
+            }
+            const domain = domains[Math.floor(Math.random() * domains.length)];
+            return `${localPart}@${domain}`;
+        }
+
+        /**
+         * 生成符合要求的密码
+         * 格式：大写+小写+数字+特殊符号，长度8-12位
+         */
+        function generatePassword() {
+            const upperChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const lowerChars = 'abcdefghijklmnopqrstuvwxyz';
+            const numbers = '0123456789';
+            const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+
+            let password = '';
+            password += upperChars[Math.floor(Math.random() * upperChars.length)];
+            password += lowerChars[Math.floor(Math.random() * lowerChars.length)];
+            password += numbers[Math.floor(Math.random() * numbers.length)];
+            password += specialChars[Math.floor(Math.random() * specialChars.length)];
+
+            const allChars = upperChars + lowerChars + numbers + specialChars;
+            const remainingLength = Math.floor(Math.random() * 5) + 4;
+
+            for (let i = 0; i < remainingLength; i++) {
+                password += allChars[Math.floor(Math.random() * allChars.length)];
+            }
+
+            return password.split('').sort(() => Math.random() - 0.5).join('');
+        }
+
+        /**
+         * 生成100个测试用户
+         */
+        function generateUsers() {
+            const users = [];
+            for (let i = 0; i < 100; i++) {
+                const isPhone = Math.random() > 0.5;
+                const username = isPhone ? generatePhone() : generateEmail();
+                users.push({
+                    id: i + 1,
+                    username,
+                    password: generatePassword(),
+                    type: isPhone ? 'phone' : 'email'
+                });
+            }
+            return users;
+        }
+
+        // 生成测试用户数据
+        const mockUsers = generateUsers();
+
+        /**
+         * 验证手机号格式
+         */
+        function validatePhone(phone) {
+            const phoneRegex = /^1[3-9]\d{9}$/;
+            return phoneRegex.test(phone) && phone.length === 11;
+        }
+
+        /**
+         * 渲染表格
+         */
+        function renderTable(users) {
+            const tbody = document.getElementById('usersBody');
+            tbody.innerHTML = users.map(user => {
+                const isValidPhone = user.type === 'phone' && validatePhone(user.username);
+                const validationStatus = user.type === 'phone' 
+                    ? (isValidPhone ? '<span style="color: green;">✓ 正确</span>' : '<span style="color: red;">✗ 错误</span>')
+                    : '<span style="color: blue;">-</span>';
+                
+                return `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.password}</td>
+                        <td class="${user.type}">${user.type === 'phone' ? '手机号' : '邮箱'}</td>
+                        <td>${validationStatus}</td>
+                        <td>
+                            <button class="copy-btn" onclick="copyUser('${user.username}', '${user.password}')">复制</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        /**
+         * 复制用户信息
+         */
+        function copyUser(username, password) {
+            const text = `用户名: ${username}\n密码: ${password}`;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('已复制到剪贴板！\n' + text);
+            });
+        }
+
+        /**
+         * 更新统计信息
+         */
+        function updateStats() {
+            const totalUsers = mockUsers.length;
+            const phoneUsers = mockUsers.filter(u => u.type === 'phone').length;
+            const emailUsers = mockUsers.filter(u => u.type === 'email').length;
+            
+            document.getElementById('totalUsers').textContent = totalUsers;
+            document.getElementById('phoneUsers').textContent = phoneUsers;
+            document.getElementById('emailUsers').textContent = emailUsers;
+        }
+
+        // 搜索功能
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            const filtered = mockUsers.filter(user => 
+                user.username.toLowerCase().includes(keyword) || 
+                user.password.toLowerCase().includes(keyword)
+            );
+            renderTable(filtered);
+        });
+
+        // 初始化渲染
+        renderTable(mockUsers);
+        updateStats();
+
+        // 将 mockUsers 挂载到全局
+        window.mockUsers = mockUsers;
+        
+        // 验证所有手机号格式
+        const invalidPhones = mockUsers.filter(u => u.type === 'phone' && !validatePhone(u.username));
+        
+        console.log('测试用户数据已加载，共', mockUsers.length, '个用户');
+        console.log('手机号用户:', mockUsers.filter(u => u.type === 'phone').length, '个');
+        console.log('邮箱用户:', mockUsers.filter(u => u.type === 'email').length, '个');
+        
+        if (invalidPhones.length > 0) {
+            console.error('发现', invalidPhones.length, '个格式错误的手机号:', invalidPhones);
+        } else {
+            console.log('✓ 所有手机号格式正确！');
+        }
+        
+        console.log('前5个用户：', mockUsers.slice(0, 5));
+    </script>
+</body>
+</html>

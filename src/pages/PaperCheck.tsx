@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { checkPlagiarism } from '../api/essay'
 import type { DeepSeekError } from '../api/ai'
 import AuthModal from '../components/AuthModal'
+import { parseDocx } from '../utils/parseDocx'
 
 interface CheckResult {
   rate: number
@@ -31,6 +32,7 @@ function PaperCheck() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
+  const [isParsingDocx, setIsParsingDocx] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -67,12 +69,6 @@ function PaperCheck() {
     // 检查是否有内容可以查重
     if (wordCount < MIN_WORDS && !uploadedFile) {
       setError('请输入至少500字的内容或上传文档')
-      return
-    }
-
-    // 如果上传了文件但没有提取到内容
-    if (uploadedFile && wordCount < MIN_WORDS) {
-      setError('文件已上传成功！由于浏览器安全限制，无法直接读取.docx文件内容。请将文档内容复制粘贴到文本框中进行查重。')
       return
     }
 
@@ -144,25 +140,41 @@ function PaperCheck() {
     return isValidType || hasValidExtension
   }
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     if (!validateFile(file)) {
       setUploadStatus('error')
       return
     }
-    setUploadStatus('uploading')
     setUploadedFile(file)
-    setTimeout(() => {
-      setUploadStatus('success')
-      if (file.type === 'text/plain') {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          const text = e.target?.result as string
-          setContent(text)
-          setWordCount(text.length)
-        }
-        reader.readAsText(file)
+    if (file.name.toLowerCase().endsWith('.docx')) {
+      setUploadStatus('uploading')
+      setIsParsingDocx(true)
+      try {
+        const { text, wordCount: wc } = await parseDocx(file)
+        setContent(text)
+        setWordCount(wc)
+        setUploadStatus('success')
+      } catch (err) {
+        setUploadStatus('idle')
+        setError(err instanceof Error ? err.message : '文档解析失败，请重试')
+      } finally {
+        setIsParsingDocx(false)
       }
-    }, 1000)
+    } else {
+      setUploadStatus('uploading')
+      setTimeout(() => {
+        setUploadStatus('success')
+        if (file.type === 'text/plain') {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            const text = e.target?.result as string
+            setContent(text)
+            setWordCount(text.length)
+          }
+          reader.readAsText(file)
+        }
+      }, 1000)
+    }
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,7 +344,7 @@ function PaperCheck() {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                           </svg>
-                          <p className="text-blue-600 font-medium text-sm">正在上传...</p>
+                          <p className="text-blue-600 font-medium text-sm">{isParsingDocx ? '正在解析文档...' : '正在上传...'}</p>
                         </div>
                       ) : uploadStatus === 'success' && uploadedFile ? (
                         <div className="flex flex-col items-center">
@@ -343,7 +355,11 @@ function PaperCheck() {
                           <p className="text-xs text-gray-500 mb-2">{formatFileSize(uploadedFile.size)}</p>
                           <div className="bg-blue-100 border border-blue-300 rounded-lg px-3 py-2 mb-2 text-xs text-blue-700 text-center">
                             <p className="font-medium">文件上传成功！</p>
-                            <p className="mt-1">请将文档内容复制粘贴到下方文本框中进行查重</p>
+                            {wordCount > 0 ? (
+                              <p className="mt-1">已提取文档内容，共 {wordCount} 字</p>
+                            ) : (
+                              <p className="mt-1">请将文档内容复制粘贴到下方文本框中进行查重</p>
+                            )}
                           </div>
                           <button onClick={(e) => { e.stopPropagation(); setUploadedFile(null); setUploadStatus('idle'); setWordCount(0) }} className="text-xs text-red-500 hover:text-red-700">
                             移除文件

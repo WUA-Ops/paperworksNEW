@@ -6,6 +6,7 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { streamGeneratePPT } from '../api/essay'
 import AuthModal from '../components/AuthModal'
+import { parseDocx } from '../utils/parseDocx'
 
 // 导入本地PPT模板封面图片
 import minimalistImg from '../assets/templates/minimalist.jpg'
@@ -34,6 +35,7 @@ function AIPPTGenerator() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [streamContent, setStreamContent] = useState('')
   const [error, setError] = useState('')
+  const [isParsingDocx, setIsParsingDocx] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -96,7 +98,7 @@ function AIPPTGenerator() {
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -124,13 +126,27 @@ function AIPPTGenerator() {
     }
 
     setUploadedFile(file)
-    setUploadStatus('success')
     setError('')
 
     // 自动提取文件名作为论文标题（去掉扩展名）
     if (!paperTitle.trim()) {
       const titleWithoutExt = file.name.replace(/\.[^/.]+$/, '')
       setPaperTitle(titleWithoutExt)
+    }
+
+    if (file.name.toLowerCase().endsWith('.docx')) {
+      setUploadStatus('success')
+      setIsParsingDocx(true)
+      try {
+        const { text } = await parseDocx(file)
+        setPaperContent(text)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '文档解析失败，请重试')
+      } finally {
+        setIsParsingDocx(false)
+      }
+    } else {
+      setUploadStatus('success')
     }
   }
 
@@ -403,13 +419,24 @@ function AIPPTGenerator() {
                         </div>
                       )}
                     </div>
-                    {uploadStatus === 'success' && (
+                    {uploadStatus === 'success' && isParsingDocx && (
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <svg className="w-4 h-4 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                           </svg>
-                          <span className="text-xs text-blue-700">文件上传成功！由于浏览器安全限制，建议在"输入内容生成"模式下粘贴论文内容以获得更精确的PPT大纲。</span>
+                          <span className="text-xs text-blue-700">正在解析文档内容...</span>
+                        </div>
+                      </div>
+                    )}
+                    {uploadStatus === 'success' && !isParsingDocx && paperContent && (
+                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-xs text-green-700">文档解析成功！已提取 {paperContent.length} 字内容</span>
                         </div>
                       </div>
                     )}

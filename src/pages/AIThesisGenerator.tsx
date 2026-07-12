@@ -6,6 +6,7 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { streamGenerateDefenseScript } from '../api/essay'
 import AuthModal from '../components/AuthModal'
+import { parseDocx } from '../utils/parseDocx'
 
 /**
  * AIThesisGenerator页面主函数组件
@@ -26,6 +27,7 @@ function AIThesisGenerator() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
+  const [isParsingDocx, setIsParsingDocx] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -154,24 +156,42 @@ function AIThesisGenerator() {
   }
 
   // 处理文件
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     if (!validateFile(file)) {
       setUploadStatus('error')
       alert('不支持的文件格式，请上传 PDF、DOC、DOCX、RAR、ZIP 或 TXT 文件')
       return
     }
 
-    setUploadStatus('uploading')
-    
-    // 模拟上传过程
-    setTimeout(() => {
-      setUploadedFile(file)
-      setUploadedFileName(file.name)
-      setUploadStatus('success')
-      // 自动提取文件名作为论文标题（去掉扩展名）
-      const titleWithoutExt = file.name.replace(/\.[^/.]+$/, '')
-      setPaperTitle(titleWithoutExt)
-    }, 1000)
+    setUploadedFile(file)
+    setUploadedFileName(file.name)
+
+    // 自动提取文件名作为论文标题（去掉扩展名）
+    const titleWithoutExt = file.name.replace(/\.[^/.]+$/, '')
+    setPaperTitle(titleWithoutExt)
+
+    if (file.name.toLowerCase().endsWith('.docx')) {
+      setUploadStatus('uploading')
+      setIsParsingDocx(true)
+      try {
+        const { text } = await parseDocx(file)
+        setPaperTitle(titleWithoutExt)
+        setUploadStatus('success')
+        // 存储解析出的文本内容，供后续使用
+        setGeneratedScript(text)
+      } catch (err) {
+        setUploadStatus('idle')
+        alert(err instanceof Error ? err.message : '文档解析失败，请重试')
+      } finally {
+        setIsParsingDocx(false)
+      }
+    } else {
+      // 其他格式模拟上传过程
+      setUploadStatus('uploading')
+      setTimeout(() => {
+        setUploadStatus('success')
+      }, 1000)
+    }
   }
 
   // 移除已上传文件
@@ -332,7 +352,7 @@ function AIThesisGenerator() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      <p className="text-xs text-blue-600">正在上传...</p>
+                      <p className="text-xs text-blue-600">{isParsingDocx ? '正在解析文档...' : '正在上传...'}</p>
                     </div>
                   ) : uploadStatus === 'success' && uploadedFile ? (
                     <div className="flex flex-col items-center">

@@ -119,7 +119,52 @@ function deepseekProxy(env: Record<string, string>): Plugin {
         }
       }
 
+      // 解析 .docx 文件
+      async function handleParseDocx(req: any, res: any) {
+        const { fileBase64, fileName } = await parseBody(req)
+        if (!fileBase64) {
+          res.statusCode = 400
+          res.end(JSON.stringify({ error: '缺少文件内容' }))
+          return
+        }
+
+        try {
+          // 动态导入 mammoth（仅在开发服务器中使用）
+          const mammoth = await import('mammoth')
+          const buffer = Buffer.from(fileBase64, 'base64')
+          const result = await mammoth.extractRawText({ buffer })
+          const text = result.value
+
+          if (!text || text.trim().length === 0) {
+            res.statusCode = 400
+            res.end(JSON.stringify({ error: '文档内容为空或无法解析' }))
+            return
+          }
+
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify({
+            text: text.trim(),
+            wordCount: text.trim().length,
+            fileName: fileName || 'unknown.docx'
+          }))
+        } catch (err: any) {
+          console.error('Docx parse error:', err)
+          res.statusCode = 500
+          res.end(JSON.stringify({ error: '文档解析失败', message: err.message }))
+        }
+      }
+
       // 注册中间件
+      server.middlewares.use('/api/parse-docx', (req, res, next) => {
+        setCorsHeaders(res)
+        if (req.method === 'OPTIONS') { res.statusCode = 200; res.end(); return }
+        if (req.method !== 'POST') { res.statusCode = 405; res.end(JSON.stringify({ error: 'Method not allowed' })); return }
+        handleParseDocx(req, res).catch(err => {
+          console.error('Docx parse error:', err)
+          if (!res.headersSent) { res.statusCode = 500; res.end(JSON.stringify({ error: 'Internal server error' })) }
+        })
+      })
+
       server.middlewares.use('/api/chat', (req, res, next) => {
         setCorsHeaders(res)
         if (req.method === 'OPTIONS') { res.statusCode = 200; res.end(); return }

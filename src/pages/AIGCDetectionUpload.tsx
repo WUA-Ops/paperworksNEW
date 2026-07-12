@@ -6,6 +6,7 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { detectAIGC } from '../api/essay'
 import AuthModal from '../components/AuthModal'
+import { parseDocx } from '../utils/parseDocx'
 
 /**
  * AIGCDetectionUpload页面主函数组件
@@ -23,6 +24,7 @@ function AIGCDetectionUpload() {
   const [isDetecting, setIsDetecting] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
+  const [isParsingDocx, setIsParsingDocx] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -99,21 +101,49 @@ function AIGCDetectionUpload() {
   }
 
   // 处理文件
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     if (!validateFile(file)) {
       setUploadStatus('error')
       alert('不支持的文件格式，请上传 PDF、DOC、DOCX、RAR、ZIP 或 TXT 文件')
       return
     }
 
-    setUploadStatus('uploading')
     setUploadedFile(file)
     setUploadedFileName(file.name)
 
-    // 模拟上传过程
-    setTimeout(() => {
-      setUploadStatus('success')
-    }, 1000)
+    if (file.name.toLowerCase().endsWith('.docx')) {
+      setUploadStatus('uploading')
+      setIsParsingDocx(true)
+      try {
+        const { text } = await parseDocx(file)
+        setTextContent(text)
+        setUploadStatus('success')
+      } catch (err) {
+        setUploadStatus('idle')
+        alert(err instanceof Error ? err.message : '文档解析失败，请重试')
+      } finally {
+        setIsParsingDocx(false)
+      }
+    } else if (file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt')) {
+      setUploadStatus('uploading')
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const text = e.target?.result as string
+        setTextContent(text)
+        setUploadStatus('success')
+      }
+      reader.onerror = () => {
+        setUploadStatus('error')
+        alert('文件读取失败，请重试')
+      }
+      reader.readAsText(file)
+    } else {
+      // 其他格式（PDF等）无法直接读取，模拟上传
+      setUploadStatus('uploading')
+      setTimeout(() => {
+        setUploadStatus('success')
+      }, 1000)
+    }
   }
 
   // 处理拖拽进入
@@ -184,9 +214,11 @@ function AIGCDetectionUpload() {
         alert('请先上传文件或切换到粘贴文本模式')
         return
       }
-      // 文件上传模式暂不支持，提示用户切换到粘贴文本模式
-      alert('文件上传模式暂不支持直接读取文件内容。请切换到"粘贴文本"模式，将文档内容复制粘贴到文本框中进行检测。')
-      return
+      // 文件上传模式：检查是否已解析出文本内容
+      if (textContent.length < 500) {
+        alert('文档内容不足500字，或文件格式不支持直接读取。请切换到"粘贴文本"模式，将文档内容复制粘贴到文本框中进行检测。')
+        return
+      }
     }
     
     setIsDetecting(true)
@@ -437,7 +469,7 @@ function AIGCDetectionUpload() {
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
                           </div>
-                          <p className="text-blue-600 font-medium">正在上传...</p>
+                          <p className="text-blue-600 font-medium">{isParsingDocx ? '正在解析文档...' : '正在上传...'}</p>
                         </div>
                       ) : uploadStatus === 'success' && uploadedFile ? (
                         <div className="flex flex-col items-center space-y-3">

@@ -3,7 +3,6 @@
  * 以AI对话的方式实现导师答 */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { streamDefenseTutor } from '../api/essay'
 import AuthModal from '../components/AuthModal'
 
 /**
@@ -19,8 +18,8 @@ function AITutorSimulation() {
       content: '你好！我是你的毕业论文导师。你可以以对话的方式模拟彩排答辩过程，那我们开始吧。'
     }
   ])
-  const [paperTitle, setPaperTitle] = useState('')
-  const [isStreaming, setIsStreaming] = useState(false)
+  const [_paperTitle, _setPaperTitle] = useState('')
+  const [_isStreaming, _setIsStreaming] = useState(false)
   const [userInfo, setUserInfo] = useState('')
   const [questionBank, setQuestionBank] = useState('')
   const [speechTechnique, setSpeechTechnique] = useState('')

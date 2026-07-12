@@ -121,7 +121,7 @@ function SmartOutline() {
 
       const level1Match = trimmedLine.match(/^[一二三四五六七八九十]+[、.．]\s*(.+)$/)
       const level2Match = trimmedLine.match(/^\d+[、.．]\s*(.+)$/)
-      const level3Match = trimmedLine.match(/^[（(]\d+[)）]\s*(.+)$/)
+      trimmedLine.match(/^[（(]\d+[)）]\s*(.+)$/)
 
       if (level1Match) {
         const node: OutlineNode = {

@@ -34,9 +34,9 @@ function FormatStandardization() {
   const [isChecking, setIsChecking] = useState(false)
   const [checkProgress, setCheckProgress] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
-  const [formatContent, setFormatContent] = useState('')
-  const [formattedResult, setFormattedResult] = useState('')
-  const [isFormatting, setIsFormatting] = useState(false)
+  const [formatContent, _setFormatContent] = useState('')
+  const [_formattedResult, setFormattedResult] = useState('')
+  const [_isFormatting, setIsFormatting] = useState(false)
 
   const sidebarItems = [
     { id: 'topic', name: '选题灵感', icon: 'lightbulb', path: '/topic' },

@@ -2,7 +2,6 @@
  * Toast组件 - 全局消息提示
  * 支持成功、错误、警告、信息四种类型
  */
-import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'

@@ -50,10 +50,10 @@ function VersionCompare() {
   const [showTimeline, setShowTimeline] = useState(true)
   const [selectedDiff, setSelectedDiff] = useState<number | null>(null)
   const [commentInput, setCommentInput] = useState('')
-  const [version1Content, setVersion1Content] = useState('')
-  const [version2Content, setVersion2Content] = useState('')
-  const [isComparing, setIsComparing] = useState(false)
-  const [comparisonResult, setComparisonResult] = useState('')
+  const [version1Content, _setVersion1Content] = useState('')
+  const [version2Content, _setVersion2Content] = useState('')
+  const [_isComparing, setIsComparing] = useState(false)
+  const [_comparisonResult, setComparisonResult] = useState('')
   const [showAuthModal, setShowAuthModal] = useState(false)
 
   const versions: Version[] = [
